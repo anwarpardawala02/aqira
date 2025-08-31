@@ -1,0 +1,7 @@
+packages:
+  - 'app-frontend'
+  - 'app-api'
+  - 'app-workers'
+  - 'infra'
+  - 'docs'
+  - 'packages/shared'

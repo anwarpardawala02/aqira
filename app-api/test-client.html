@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 200px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Multi-Model Comparator Test</h1>
+    
+    <div>
+        <h2>Health Check</h2>
+        <button id="healthBtn">Check Health</button>
+        <div id="healthResult"></div>
+    </div>
+    
+    <div>
+        <h2>Comparison Test</h2>
+        <textarea id="prompt" placeholder="Enter your prompt here...">Tell me a brief joke about programming</textarea>
+        <button id="compareBtn">Compare</button>
+        <div id="results"></div>
+    </div>
+    
+    <script>
+        document.getElementById('healthBtn').addEventListener('click', async () => {
+            const healthResult = document.getElementById('healthResult');
+            healthResult.textContent = 'Loading...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                healthResult.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                healthResult.textContent = `Error: ${error.message}`;
+            }
+        });
+        
+        document.getElementById('compareBtn').addEventListener('click', async () => {
+            const promptText = document.getElementById('prompt').value;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.textContent = 'Sending request...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/v1/compare', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt: promptText })
+                });
+                
+                const data = await response.json();
+                resultsDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // If we have a streamUrl, start listening for events
+                if (data.streamUrl) {
+                    const jobId = data.jobId;
+                    resultsDiv.textContent += '\n\nConnecting to stream...';
+                    
+                    const evtSource = new EventSource(`http://localhost:8000${data.streamUrl}`);
+                    let output = '';
+                    
+                    evtSource.onmessage = (event) => {
+                        const eventData = JSON.parse(event.data);
+                        console.log('SSE Event:', eventData);
+                        
+                        if (eventData.type === 'chunk') {
+                            output += eventData.content;
+                            resultsDiv.textContent = `${resultsDiv.textContent.split('\n\n')[0]}\n\nStreaming output:\n${output}`;
+                        } else if (eventData.type === 'done') {
+                            evtSource.close();
+                            resultsDiv.textContent += '\n\nStream completed.';
+                        } else if (eventData.type === 'error') {
+                            evtSource.close();
+                            resultsDiv.textContent += `\n\nStream error: ${eventData.error}`;
+                        }
+                    };
+                    
+                    evtSource.onerror = () => {
+                        evtSource.close();
+                        resultsDiv.textContent += '\n\nStream connection closed or errored.';
+                    };
+                }
+                
+            } catch (error) {
+                resultsDiv.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Supabase Project Configuration
+
+project_id = "tqcrsrnpyvpeaimoeskp"
+name = "Multimodel AI"
+
+[database]
+region = "aws"
+
+[auth]
+# Configure authentication methods and policies here
+
+[api]
+# API endpoint configurations
+
+[storage]
+# Storage bucket configurations
+
+[secrets]
+# Secure keys and credentials management

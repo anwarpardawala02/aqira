@@ -1,0 +1,28 @@
+{
+  "name": "app-api",
+  "version": "1.0.0",
+  "description": "Multi-Model Comparator API",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@supabase/supabase-js": "^2.38.0",
+    "dotenv": "^17.2.1",
+    "dotenv-safe": "^9.1.0",
+    "express": "^5.1.0",
+    "fastify": "^5.5.0",
+    "openai": "^5.16.0"
+  },
+  "devDependencies": {
+    "@types/dotenv-safe": "^8.1.6",
+    "@types/node": "^20.6.3",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.2.2"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "multi-model-comparator",
+  "version": "0.1.0",
+  "description": "Multi-Model Comparator SaaS",
+  "scripts": {
+    "frontend": "cd app-frontend && npm run dev",
+    "api": "cd app-api && npm run dev",
+    "workers": "cd app-workers && npm run dev"
+  },
+  "workspaces": [
+    "app-frontend",
+    "app-api",
+    "app-workers",
+    "packages/shared"
+  ]
+}

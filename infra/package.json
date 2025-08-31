@@ -1,0 +1,14 @@
+{
+  "name": "infra",
+  "version": "0.1.0",
+  "description": "Infrastructure as Code for Multi-Model Comparator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "aws-cdk-lib": "^2.94.0",
+    "constructs": "^10.2.70",
+    "typescript": "^5.2.2"
+  }
+}
