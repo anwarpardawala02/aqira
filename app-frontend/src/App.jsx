@@ -6,7 +6,9 @@ export default function App() {
   const [models, setModels] = useState({
     'openai': true,
     'anthropic': false,
-    'mistral': false
+    'gemini': false,
+    'grok': false,
+    'deepseek': false
   });
   
   // Use the compare hook
@@ -25,8 +27,19 @@ export default function App() {
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
-    // Use the real API now
-    startComparison(prompt);
+    
+    // Get selected models
+    const selectedModels = Object.entries(models)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([model]) => model);
+      
+    if (selectedModels.length === 0) {
+      alert('Please select at least one model');
+      return;
+    }
+    
+    // Use the real API now with selected models
+    startComparison(prompt, selectedModels);
   };
 
   return (
@@ -55,7 +68,7 @@ export default function App() {
                 onClick={() => toggleModel('openai')} 
                 className={`px-3 py-1 rounded ${models.openai ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
               >
-                OpenAI GPT-4
+                OpenAI
               </button>
               <button 
                 onClick={() => toggleModel('anthropic')} 
@@ -64,10 +77,22 @@ export default function App() {
                 Anthropic Claude
               </button>
               <button 
-                onClick={() => toggleModel('mistral')} 
-                className={`px-3 py-1 rounded ${models.mistral ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                onClick={() => toggleModel('gemini')} 
+                className={`px-3 py-1 rounded ${models.gemini ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
               >
-                Mistral
+                Google Gemini
+              </button>
+              <button 
+                onClick={() => toggleModel('grok')} 
+                className={`px-3 py-1 rounded ${models.grok ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                xAI Grok
+              </button>
+              <button 
+                onClick={() => toggleModel('deepseek')} 
+                className={`px-3 py-1 rounded ${models.deepseek ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                DeepSeek
               </button>
             </div>
           </div>
@@ -84,12 +109,14 @@ export default function App() {
         {/* Response Grid */}
         {Object.keys(responses).length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <div className="border-b pb-2 mb-3">
-                <h3 className="font-medium">OpenAI GPT-4</h3>
+            {models.openai && responses.openai && (
+              <div className="bg-white p-4 rounded-lg shadow-md">
+                <div className="border-b pb-2 mb-3">
+                  <h3 className="font-medium">OpenAI</h3>
+                </div>
+                <div className="whitespace-pre-wrap">{responses.openai}</div>
               </div>
-              <div className="whitespace-pre-wrap">{responses.openai}</div>
-            </div>
+            )}
             
             {models.anthropic && responses.anthropic && (
               <div className="bg-white p-4 rounded-lg shadow-md">
@@ -100,12 +127,30 @@ export default function App() {
               </div>
             )}
             
-            {models.mistral && responses.mistral && (
+            {models.gemini && responses.gemini && (
               <div className="bg-white p-4 rounded-lg shadow-md">
                 <div className="border-b pb-2 mb-3">
-                  <h3 className="font-medium">Mistral AI</h3>
+                  <h3 className="font-medium">Google Gemini</h3>
                 </div>
-                <div className="whitespace-pre-wrap">{responses.mistral}</div>
+                <div className="whitespace-pre-wrap">{responses.gemini}</div>
+              </div>
+            )}
+            
+            {models.grok && responses.grok && (
+              <div className="bg-white p-4 rounded-lg shadow-md">
+                <div className="border-b pb-2 mb-3">
+                  <h3 className="font-medium">xAI Grok</h3>
+                </div>
+                <div className="whitespace-pre-wrap">{responses.grok}</div>
+              </div>
+            )}
+            
+            {models.deepseek && responses.deepseek && (
+              <div className="bg-white p-4 rounded-lg shadow-md">
+                <div className="border-b pb-2 mb-3">
+                  <h3 className="font-medium">DeepSeek</h3>
+                </div>
+                <div className="whitespace-pre-wrap">{responses.deepseek}</div>
               </div>
             )}
           </div>

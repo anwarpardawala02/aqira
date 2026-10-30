@@ -8,19 +8,22 @@ export function useCompare() {
   const [responses, setResponses] = useState({});
   const [error, setError] = useState(null);
 
-  const startComparison = useCallback(async (prompt) => {
+  const startComparison = useCallback(async (prompt, selectedModels = ['openai']) => {
     setIsLoading(true);
     setError(null);
     setResponses({});
 
     try {
-      // Submit comparison job
+      // Submit comparison job with selected models
       const response = await fetch(`${API_URL}/v1/compare`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt,
+          models: selectedModels
+        }),
       });
 
       if (!response.ok) {
@@ -54,9 +57,14 @@ export function useCompare() {
         }
         
         if (eventData.type === 'done') {
-          // Model has completed
+          // Individual model has completed
           const { provider, model } = eventData;
           console.log(`${provider}-${model} has completed`);
+        }
+        
+        if (eventData.type === 'all_done') {
+          // All models have completed
+          console.log('All models completed');
           setIsLoading(false);
           eventSource.close();
         }

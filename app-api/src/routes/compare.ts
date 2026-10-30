@@ -1,5 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { callOpenAI, streamOpenAI } from '../adapters/openai';
+import { callAnthropic } from '../adapters/anthropic';
+import { callGemini } from '../adapters/gemini';
+import { callGrok } from '../adapters/grok';
+import { callDeepSeek } from '../adapters/deepseek';
 
 // In-memory storage for job data (replace with Redis/DB in production)
 const jobStore = new Map();
@@ -12,6 +16,24 @@ interface CompareRequest {
   models?: string[];
 }
 
+// Function to call the appropriate model adapter based on provider
+async function callModelAPI(provider: string, prompt: string) {
+  switch (provider) {
+    case 'openai':
+      return await callOpenAI(prompt);
+    case 'anthropic':
+      return await callAnthropic(prompt);
+    case 'gemini':
+      return await callGemini(prompt);
+    case 'grok':
+      return await callGrok(prompt);
+    case 'deepseek':
+      return await callDeepSeek(prompt);
+    default:
+      throw new Error(`Unsupported model provider: ${provider}`);
+  }
+}
+
 // Function to process job
 async function processJob(jobId: string, prompt: string, models: string[]) {
   const jobData = jobStore.get(jobId);
@@ -19,18 +41,36 @@ async function processJob(jobId: string, prompt: string, models: string[]) {
   try {
     console.log(`Processing job ${jobId} with prompt: ${prompt}`);
     
-    // For now, just handling OpenAI models
-    const response = await callOpenAI(prompt);
-    
-    jobData.results.push({
-      model: models[0],
-      provider: 'openai',
-      output: response.output,
-      completedAt: new Date()
+    // Create a promise for each requested model
+    const modelPromises = models.map(async (provider) => {
+      try {
+        const response = await callModelAPI(provider, prompt);
+        return {
+          model: response.model || provider,
+          provider,
+          output: response.output,
+          completedAt: new Date()
+        };
+      } catch (error: any) {
+        console.error(`Error calling ${provider}:`, error);
+        return {
+          model: provider,
+          provider,
+          output: `Error: ${error.message}`,
+          error: true,
+          completedAt: new Date()
+        };
+      }
     });
     
+    // Wait for all promises to resolve
+    const results = await Promise.all(modelPromises);
+    
+    // Add all results to the job data
+    jobData.results = results;
+    
     jobData.status = 'completed';
-    console.log(`Job ${jobId} completed successfully`);
+    console.log(`Job ${jobId} completed successfully with ${results.length} model results`);
   } catch (error: any) {
     console.error(`Error in job processing:`, error);
     jobData.status = 'error';
@@ -41,7 +81,7 @@ async function processJob(jobId: string, prompt: string, models: string[]) {
 export default async function compareRoutes(fastify: FastifyInstance) {
   // Post a new comparison job
   fastify.post('/v1/compare', async (request, reply) => {
-    const { prompt, models = ['gpt-4o-mini'] } = request.body as CompareRequest;
+    const { prompt, models = ['openai'] } = request.body as CompareRequest;
     
     if (!prompt) {
       reply.code(400);
@@ -138,21 +178,31 @@ export default async function compareRoutes(fastify: FastifyInstance) {
     try {
       // Send current job state - if it's already completed or errored out, use that data
       if (job.status === 'completed') {
-        // If job is already completed, send the result immediately
-        const result = job.results[0];
-        if (result) {
-          sendEvent({
-            type: 'chunk',
-            provider: result.provider,
-            model: result.model,
-            content: result.output
+        // If job is already completed, send all results immediately
+        if (job.results.length > 0) {
+          // Process all results
+          job.results.forEach((result: {provider: string, model: string, output: string}) => {
+            if (result) {
+              sendEvent({
+                type: 'chunk',
+                provider: result.provider,
+                model: result.model,
+                content: result.output
+              });
+              
+              sendEvent({
+                type: 'done',
+                provider: result.provider,
+                model: result.model
+              });
+            }
           });
           
+          // Send final all_done event
           sendEvent({
-            type: 'done',
-            provider: result.provider,
-            model: result.model
+            type: 'all_done'
           });
+          
           return reply;
         }
       } else if (job.status === 'error') {
@@ -185,24 +235,32 @@ export default async function compareRoutes(fastify: FastifyInstance) {
           // If job completed, send the result and end polling
           if (currentJob.status === 'completed') {
             clearInterval(pollInterval);
-            const result = currentJob.results[0];
-            if (result) {
-              // Map to the format the frontend expects
-              const providerKey = `${result.provider}`;
-              
-              sendEvent({
-                type: 'chunk',
-                provider: result.provider,
-                model: result.model,
-                content: result.output
-              });
-              
-              sendEvent({
-                type: 'done',
-                provider: result.provider,
-                model: result.model
-              });
-            }
+            
+            // Process all results
+            currentJob.results.forEach((result: {provider: string, model: string, output: string}) => {
+              if (result) {
+                // Map to the format the frontend expects
+                const providerKey = `${result.provider}`;
+                
+                sendEvent({
+                  type: 'chunk',
+                  provider: result.provider,
+                  model: result.model,
+                  content: result.output
+                });
+                
+                sendEvent({
+                  type: 'done',
+                  provider: result.provider,
+                  model: result.model
+                });
+              }
+            });
+            
+            // Final done event for all models
+            sendEvent({
+              type: 'all_done'
+            });
             return;
           }
           

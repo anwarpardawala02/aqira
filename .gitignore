@@ -28,3 +28,6 @@ out/
 *.swp
 *.swo
 .DS_Store
+
+# Local Google Cloud service-account credential
+/seismic-elf-471412-t6-b148f0e437fc.json
